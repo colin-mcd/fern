@@ -22,62 +22,70 @@ pub struct Pos {
 
 // Raw, unchecked term
 #[derive(Debug, Clone)]
-pub enum RawTerm {
-    Lam {var: String, annot: Option<Box<RawType>>, body: Box<RawTerm>, lb: Pos, rb: Pos},
-    App {head: Box<RawTerm>, args: Vec<Box<RawTerm>>, lb: Pos, rb: Pos},
+pub enum RawTm {
+    Lam {var: String, annot: Option<RawType>, body: RawTerm, lb: Pos, rb: Pos},
+    App {head: RawTerm, args: Vec<RawTerm>, lb: Pos, rb: Pos},
     Var {var: String, lb: Pos, rb: Pos}
 }
 
 #[derive(Debug, Clone)]
-pub enum RawType {
-    Lam {var: String, annot: Option<Box<RawKind>>, body: Box<RawType>, lb: Pos, rb: Pos},
-    All {var: String, annot: Option<Box<RawKind>>, body: Box<RawType>, lb: Pos, rb: Pos},
-    App {head: Box<RawType>, args: Vec<Box<RawType>>, lb: Pos, rb: Pos},
-    Arr {dom: Box<RawType>, cod: Box<RawType>, lb: Pos, rb: Pos},
+pub enum RawTp {
+    Lam {var: String, annot: Option<RawKind>, body: RawType, lb: Pos, rb: Pos},
+    All {var: String, annot: Option<RawKind>, body: RawType, lb: Pos, rb: Pos},
+    App {head: RawType, args: Vec<RawType>, lb: Pos, rb: Pos},
+    Arr {dom: RawType, cod: RawType, lb: Pos, rb: Pos},
     Var {var: String, lb: Pos, rb: Pos}
 }
 
 #[derive(Debug, Clone)]
-pub enum RawKind {
+pub enum RawKd {
     Star {lb: Pos, rb: Pos},
-    Arr {dom: Box<RawKind>, cod: Box<RawKind>, lb: Pos, rb: Pos}
+    Arr {dom: RawKind, cod: RawKind, lb: Pos, rb: Pos}
 }
+
+pub type RawTerm = Box<RawTm>;
+pub type RawType = Box<RawTp>;
+pub type RawKind = Box<RawKd>;
 
 #[derive(Debug, Clone)]
 pub enum RawDef {
-    Tm {var: String, tp: Option<Box<RawType>>, tm: Box<RawTerm>, lb: Pos, rb: Pos},
-    Tp {var: String, tp: Box<RawType>, lb: Pos, rb: Pos}
+    Tm {var: String, annot: Option<RawType>, body: RawTerm, lb: Pos, rb: Pos},
+    Tp {var: String, annot: Option<RawKind>, body: RawType, lb: Pos, rb: Pos}
 }
 
 pub type AST = Vec<RawDef>;
 
 pub struct TmVar {
     var: String,
-    tp: *const Type,
+    tp: Box<Type>,
 }
 
 pub struct TpVar {
     var: String,
-    kd: *const Kind,
+    kd: Box<Kind>,
 }
 
 // Elaborated, information-rich term
-pub enum Term {
-    Lam {var: TmVar, body: *const Term, rettp: *const Type},
-    App {head: *const Term, args: Vec<*const Term>, tp: *const Type},
+pub enum Tm {
+    Lam {var: TmVar, body: Term, rettp: Type},
+    App {head: Term, args: Vec<Term>, tp: Type},
     Var {var: TmVar}
 }
 
-pub enum Type {
-    Arr {dom: *const Type, cod: *const Type},
-    All {var: TpVar, body: *const Type},
+pub enum Tp {
+    Arr {dom: Type, cod: Type},
+    All {var: TpVar, body: Type},
     Var {var: TpVar}
 }
 
-pub enum Kind {
+pub enum Kd {
     Star,
-    Arr {dom: *const Kind, cod: *const Kind},
+    Arr {dom: Kind, cod: Kind},
 }
+
+pub type Term = Box<Tm>;
+pub type Type = Box<Tp>;
+pub type Kind = Box<Kd>;
 
 
 pub trait Span {
@@ -90,33 +98,42 @@ pub trait Span {
     }
 }
 
-impl Span for RawTerm {
+impl Span for RawTm {
     fn bounds(&self) -> (Pos, Pos) {
         match *self {
-            RawTerm::Lam {var: _, annot: _, body: _, lb, rb} => (lb, rb),
-            RawTerm::App {head: _, args: _, lb, rb} => (lb, rb),
-            RawTerm::Var {var: _, lb, rb} => (lb, rb)
+            RawTm::Lam {var: _, annot: _, body: _, lb, rb} => (lb, rb),
+            RawTm::App {head: _, args: _, lb, rb} => (lb, rb),
+            RawTm::Var {var: _, lb, rb} => (lb, rb)
         }
     }
 }
 
-impl Span for RawType {
+impl Span for RawTp {
     fn bounds(&self) -> (Pos, Pos) {
         match *self {
-            RawType::Lam {var: _, annot: _, body: _, lb, rb} => (lb, rb),
-            RawType::All {var: _, annot: _, body: _, lb, rb} => (lb, rb),
-            RawType::App {head: _, args: _, lb, rb} => (lb, rb),
-            RawType::Arr {dom: _, cod: _, lb, rb} => (lb, rb),
-            RawType::Var {var: _, lb, rb} => (lb, rb)
+            RawTp::Lam {var: _, annot: _, body: _, lb, rb} => (lb, rb),
+            RawTp::All {var: _, annot: _, body: _, lb, rb} => (lb, rb),
+            RawTp::App {head: _, args: _, lb, rb} => (lb, rb),
+            RawTp::Arr {dom: _, cod: _, lb, rb} => (lb, rb),
+            RawTp::Var {var: _, lb, rb} => (lb, rb)
         }
     }
 }
 
-impl Span for RawKind {
+impl Span for RawKd {
     fn bounds(&self) -> (Pos, Pos) {
         match *self {
-            RawKind::Star {lb, rb} => (lb, rb),
-            RawKind::Arr {dom: _, cod: _, lb, rb} => (lb, rb)
+            RawKd::Star {lb, rb} => (lb, rb),
+            RawKd::Arr {dom: _, cod: _, lb, rb} => (lb, rb)
+        }
+    }
+}
+
+impl Span for RawDef {
+    fn bounds(&self) -> (Pos, Pos) {
+        match *self {
+            RawDef::Tm {var: _, annot: _, body: _, lb, rb} => (lb, rb),
+            RawDef::Tp {var: _, annot: _, body: _, lb, rb} => (lb, rb)
         }
     }
 }

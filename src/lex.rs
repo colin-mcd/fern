@@ -25,6 +25,8 @@ pub enum TokTp {
     Data,
     Match,
     MatchArr,
+    Def,
+    Type,
     Bar,
     Syntax,
     EOF
@@ -48,6 +50,8 @@ impl fmt::Display for TokTp {
             TokTp::Data     => "data",
             TokTp::Match    => "match",
             TokTp::MatchArr => "=>",
+            TokTp::Def      => "def",
+            TokTp::Type     => "type",
             TokTp::Bar      => "|",
             TokTp::Syntax   => "syntax",
             TokTp::EOF      => "EOF"
@@ -154,6 +158,8 @@ fn lex_h(body: Vec<char>, idx: usize, pos: Pos, toks: &mut Vec<Token>) -> Result
                     "data" => TokTp::Data,
                     "forall" => TokTp::All,
                     "match" => TokTp::Match,
+                    "def" => TokTp::Def,
+                    "type" => TokTp::Type,
                     "=>" => TokTp::MatchArr,
                     "=" => TokTp::Eq,
                     "|" => TokTp::Bar,
